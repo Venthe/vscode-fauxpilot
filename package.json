@@ -3,6 +3,8 @@
   "displayName": "fauxpilot",
   "description": "",
   "version": "0.0.1",
+  "repository": {"url": "https://github.com/Venthe/vscode-fauxpilot"},
+  "license": "MIT",
   "engines": {
     "vscode": "^1.70.0"
   },
