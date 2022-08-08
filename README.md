@@ -69,3 +69,7 @@ You can author your README using Visual Studio Code. Here are some useful editor
 * [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
 
 **Enjoy!**
+
+## Acknowledgements
+
+Used snippets from https://github.com/hieunc229/copilot-clone
