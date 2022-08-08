@@ -1,6 +1,6 @@
 {
-  "name": "vscode-fauxpilot",
-  "displayName": "vscode-fauxpilot",
+  "name": "fauxpilot",
+  "displayName": "fauxpilot",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -15,7 +15,7 @@
   "main": "./dist/extension.js",
   "contributes": {
     "configuration": {
-      "title": "VSCode Fauxpilot",
+      "title": "Fauxpilot",
       "properties": {
         "fauxpilot.server": {
           "type": "string",
