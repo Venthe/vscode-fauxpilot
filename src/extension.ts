@@ -6,8 +6,6 @@ import { CancellationToken, commands, ExtensionContext, InlineCompletionContext,
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(_context: ExtensionContext) {
-
-	console.log()
 	const configuration = new Configuration({
 		apiKey: "dummy"
 	});
