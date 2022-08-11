@@ -68,7 +68,9 @@
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "node ./out/test/runTest.js"
+    "test": "node ./out/test/runTest.js",
+    "vscode:package": "vsce package",
+    "vscode:publish": "vsce publish"
   },
   "devDependencies": {
     "@types/glob": "^7.2.0",
