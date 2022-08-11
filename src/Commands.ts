@@ -10,12 +10,12 @@ function setExtensionStatus(enabled: boolean) {
 
 export type Command = { command: string, callback: (...args: any[]) => any, thisArg?: any };
 
-export const turnOnFauxpilot = {
+export const turnOnFauxpilot: Command = {
     command: "fauxpilot.enable",
     callback: () => setExtensionStatus(true)
 }
 
-export const turnOffFauxpilot = {
+export const turnOffFauxpilot: Command = {
     command: "fauxpilot.disable",
     callback: () => setExtensionStatus(false)
 }
