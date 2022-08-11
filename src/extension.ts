@@ -46,8 +46,9 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 		});
 	}
 
-	private toInlineCompletions(value: CreateCompletionResponse): InlineCompletionItem[] {
-		return value.choices?.map(choice => choice.text).map(choiceText => ({ insertText: choiceText } as InlineCompletionItem)) || [];
+	private toInlineCompletions(value: CreateCompletionResponse, position: Position): InlineCompletionItem[] {
+		return value.choices?.map(choice => choice.text)
+			.map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
 	}
 
 	//@ts-ignore
@@ -64,7 +65,7 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 		// Prompt is already nil-checked
 		const response = await this.callOpenAi(prompt as String);
 		console.debug("Got response from OpenAi", response);
-		const completions = this.toInlineCompletions(response.data);
+		const completions = this.toInlineCompletions(response.data, position);
 		console.debug("Transformed completions", completions);
 		return Promise.resolve(completions);
 	}
