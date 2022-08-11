@@ -58,7 +58,7 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 
 		if (this.isNil(prompt)) {
 			console.debug("Prompt is empty, skipping");
-			return [];
+			return Promise.resolve(([] as InlineCompletionItem[]));
 		}
 
 		// Prompt is already nil-checked
@@ -66,6 +66,6 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 		console.debug("Got response from OpenAi", response);
 		const completions = this.toInlineCompletions(response.data);
 		console.debug("Transformed completions", completions);
-		return completions;
+		return Promise.resolve(completions);
 	}
 }
