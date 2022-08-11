@@ -31,6 +31,10 @@
         "fauxpilot.maxTokens": {
           "type": "number",
           "default": 4
+        },
+        "fauxpilot.maxLines": {
+          "type": "number",
+          "default": 150
         }
       }
     }

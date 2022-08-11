@@ -28,7 +28,7 @@ export function deactivate() {
 
 class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 	readonly delay: number = 150;
-	readonly maxLines = 100;
+	readonly maxLines = workspace.getConfiguration('fauxpilot').get("maxLines") as number;
 
 	cachedPrompts: Map<string, number> = new Map<string, number>();
 	
