@@ -35,6 +35,10 @@
         "fauxpilot.maxLines": {
           "type": "number",
           "default": 150
+        },
+        "fauxpilot.suggestionDelay": {
+          "type": "number",
+          "default": 150
         }
       }
     }
