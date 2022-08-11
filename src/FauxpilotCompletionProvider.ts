@@ -17,6 +17,11 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     //@ts-ignore
     // becasue ASYNC and PROMISE
     public async provideInlineCompletionItems(document: TextDocument, position: Position, context: InlineCompletionContext, token: CancellationToken): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
+        if (!workspace.getConfiguration('fauxpilot').get("enabled")) {
+            console.debug("Extension not enabled, skipping.");
+            return Promise.resolve(([] as InlineCompletionItem[]));
+        }
+        
         const prompt = this.getPrompt(document, position);
         console.debug("Requesting completion for prompt", prompt);
 

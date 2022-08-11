@@ -1,6 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
-import { ExtensionContext, languages } from 'vscode';
+import { commands, ExtensionContext, languages } from 'vscode';
+import { turnOffFauxpilot, turnOnFauxpilot } from './Commands';
 import { FauxpilotCompletionProvider } from './FauxpilotCompletionProvider';
 
 // this method is called when your extension is activated
@@ -10,7 +11,9 @@ export function activate(context: ExtensionContext) {
 	context.subscriptions.push(
 		languages.registerInlineCompletionItemProvider(
 			{ pattern: "**", scheme: 'untitled' }, new FauxpilotCompletionProvider()
-		)
+		),
+		commands.registerCommand(turnOnFauxpilot.command, turnOnFauxpilot.callback),
+		commands.registerCommand(turnOffFauxpilot.command, turnOffFauxpilot.callback)
 	);
 }
 
