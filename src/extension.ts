@@ -4,6 +4,12 @@ import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse,
 import { CancellationToken, ExtensionContext, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, languages, Position, ProviderResult, Range, TextDocument, window, workspace } from 'vscode';
 import { AxiosResponse } from 'axios';
 
+let poorManUuid = 0;
+
+function uuidv4() {
+	return `${poorManUuid++}`;
+}
+
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
 export function activate(context: ExtensionContext) {
@@ -21,6 +27,10 @@ export function deactivate() {
 }
 
 class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
+	readonly delay: number = 1500;
+
+	cachedPrompts: Map<string, number> = new Map<string, number>();
+	
 	private configuration: Configuration = new Configuration({
 		apiKey: "dummy"
 	});
@@ -51,14 +61,32 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 			.map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
 	}
 
+	private newestTimestamp() {
+		return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b))
+	}
+
+	private sleep(miliseconds: number) {
+		return new Promise(r => setTimeout(r, miliseconds))
+	};
+
 	//@ts-ignore
 	// becasue ASYNC and PROMISE
 	public async provideInlineCompletionItems(document: TextDocument, position: Position, context: InlineCompletionContext, token: CancellationToken): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
 		const prompt = this.getPrompt(document, position);
 		console.debug("Requesting completion for prompt", prompt);
 
-		if (this.isNil(prompt)) {
+		if (this.isNil(prompt) ) {
 			console.debug("Prompt is empty, skipping");
+			return Promise.resolve(([] as InlineCompletionItem[]));
+		}
+
+		const currentTimestamp = Date.now();
+		const currentId = uuidv4();
+		this.cachedPrompts.set(currentId, currentTimestamp);
+		await this.sleep(this.delay)
+		if (currentTimestamp < this.newestTimestamp()) {
+			console.debug("Newer request is present, skipping");
+			this.cachedPrompts.delete(currentId);
 			return Promise.resolve(([] as InlineCompletionItem[]));
 		}
 
