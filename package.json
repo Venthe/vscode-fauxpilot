@@ -5,6 +5,7 @@
   "version": "0.0.1",
   "repository": {"url": "https://github.com/Venthe/vscode-fauxpilot"},
   "license": "MIT",
+  "publisher": "Venthe",
   "engines": {
     "vscode": "^1.70.0"
   },
@@ -30,6 +31,14 @@
         "fauxpilot.maxTokens": {
           "type": "number",
           "default": 4
+        },
+        "fauxpilot.maxLines": {
+          "type": "number",
+          "default": 150
+        },
+        "fauxpilot.suggestionDelay": {
+          "type": "number",
+          "default": 150
         }
       }
     }
