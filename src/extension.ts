@@ -6,7 +6,7 @@ import { AxiosResponse } from 'axios';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
-export function activate(_context: ExtensionContext) {
+export function activate(context: ExtensionContext) {
 	function getPrompt(document: TextDocument, position: Position): String | undefined {
 		return document.getText(
 			new Range(position.with(undefined, 0), position)
@@ -58,8 +58,10 @@ export function activate(_context: ExtensionContext) {
 	};
 
 	console.debug("Registering Fauxpilot provider", new Date());
-	languages.registerInlineCompletionItemProvider(
-		{ pattern: "**" }, provider
+	context.subscriptions.push(
+		languages.registerInlineCompletionItemProvider(
+			{ pattern: "**" }, provider
+		)
 	);
 }
 
