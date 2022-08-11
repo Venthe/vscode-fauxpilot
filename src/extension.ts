@@ -37,41 +37,6 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 	});
 	private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
 
-	private getPrompt(document: TextDocument, position: Position): String | undefined {
-		const firstLine = Math.max(position.line - this.maxLines, 0);
-		
-		return document.getText(
-			new Range(firstLine, 0, position.line, position.character)
-		);
-	}
-
-	private isNil(value: String | undefined | null): boolean {
-		return value == undefined || value == null || value.length == 0;
-	}
-
-	private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
-		console.debug("Calling OpenAi", prompt);
-		return this.openai.createCompletion({
-			model: "fastertransformer",
-			prompt: prompt as CreateCompletionRequestPrompt,
-			max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
-			temperature: 0.1
-		});
-	}
-
-	private toInlineCompletions(value: CreateCompletionResponse, position: Position): InlineCompletionItem[] {
-		return value.choices?.map(choice => choice.text)
-			.map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
-	}
-
-	private newestTimestamp() {
-		return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b))
-	}
-
-	private sleep(miliseconds: number) {
-		return new Promise(r => setTimeout(r, miliseconds))
-	};
-
 	//@ts-ignore
 	// becasue ASYNC and PROMISE
 	public async provideInlineCompletionItems(document: TextDocument, position: Position, context: InlineCompletionContext, token: CancellationToken): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
@@ -100,4 +65,40 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 		console.debug("Transformed completions", completions);
 		return Promise.resolve(completions);
 	}
+
+	private getPrompt(document: TextDocument, position: Position): String | undefined {
+		const firstLine = Math.max(position.line - this.maxLines, 0);
+
+		return document.getText(
+			new Range(firstLine, 0, position.line, position.character)
+		);
+	}
+
+	private isNil(value: String | undefined | null): boolean {
+		return value == undefined || value == null || value.length == 0;
+	}
+
+	private newestTimestamp() {
+		return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b))
+	}
+
+	private sleep(miliseconds: number) {
+		return new Promise(r => setTimeout(r, miliseconds))
+	};
+
+	private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
+		console.debug("Calling OpenAi", prompt);
+		return this.openai.createCompletion({
+			model: "fastertransformer",
+			prompt: prompt as CreateCompletionRequestPrompt,
+			max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
+			temperature: 0.1
+		});
+	}
+
+	private toInlineCompletions(value: CreateCompletionResponse, position: Position): InlineCompletionItem[] {
+		return value.choices?.map(choice => choice.text)
+			.map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
+	}
+
 }
