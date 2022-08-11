@@ -28,6 +28,7 @@ export function deactivate() {
 
 class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 	readonly delay: number = 150;
+	readonly maxLines = 100;
 
 	cachedPrompts: Map<string, number> = new Map<string, number>();
 	
@@ -37,8 +38,10 @@ class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
 	private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
 
 	private getPrompt(document: TextDocument, position: Position): String | undefined {
+		const firstLine = Math.max(position.line - this.maxLines, 0);
+		
 		return document.getText(
-			new Range(position.with(undefined, 0), position)
+			new Range(firstLine, 0, position.line, position.character)
 		);
 	}
 
