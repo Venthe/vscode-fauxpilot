@@ -10,7 +10,7 @@ export function activate(context: ExtensionContext) {
 	console.debug("Registering Fauxpilot provider", new Date());
 	context.subscriptions.push(
 		languages.registerInlineCompletionItemProvider(
-			{ pattern: "**", scheme: 'untitled' }, new FauxpilotCompletionProvider()
+			{ pattern: "**" }, new FauxpilotCompletionProvider()
 		),
 		commands.registerCommand(turnOnFauxpilot.command, turnOnFauxpilot.callback),
 		commands.registerCommand(turnOffFauxpilot.command, turnOffFauxpilot.callback)
