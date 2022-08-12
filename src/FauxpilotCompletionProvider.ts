@@ -4,9 +4,6 @@ import { AxiosResponse } from 'axios';
 import { uuidv4 } from './Uuid';
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
-    readonly delay: number = workspace.getConfiguration('fauxpilot').get("suggestionDelay") as number;
-    readonly maxLines = workspace.getConfiguration('fauxpilot').get("maxLines") as number;
-
     cachedPrompts: Map<string, number> = new Map<string, number>();
 
     private configuration: Configuration = new Configuration({
@@ -33,7 +30,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         const currentTimestamp = Date.now();
         const currentId = uuidv4();
         this.cachedPrompts.set(currentId, currentTimestamp);
-        await this.sleep(this.delay)
+        await this.sleep(workspace.getConfiguration('fauxpilot').get("suggestionDelay") as number)
         if (currentTimestamp < this.newestTimestamp()) {
             console.debug("Newer request is present, skipping");
             this.cachedPrompts.delete(currentId);
@@ -49,7 +46,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     }
 
     private getPrompt(document: TextDocument, position: Position): String | undefined {
-        const firstLine = Math.max(position.line - this.maxLines, 0);
+        const firstLine = Math.max(position.line - (workspace.getConfiguration('fauxpilot').get("maxLines") as number), 0);
 
         return document.getText(
             new Range(firstLine, 0, position.line, position.character)
