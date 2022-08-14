@@ -30,7 +30,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         const currentTimestamp = Date.now();
         const currentId = nextId();
         this.cachedPrompts.set(currentId, currentTimestamp);
-        await this.sleep(workspace.getConfiguration('fauxpilot').get("suggestionDelay") as number)
+        await this.sleep(workspace.getConfiguration('fauxpilot').get("suggestionDelay") as number);
         if (currentTimestamp < this.newestTimestamp()) {
             console.debug("Newer request is present, skipping");
             this.cachedPrompts.delete(currentId);
@@ -54,15 +54,15 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     }
 
     private isNil(value: String | undefined | null): boolean {
-        return value == undefined || value == null || value.length == 0;
+        return value === undefined || value === null || value.length === 0;
     }
 
     private newestTimestamp() {
-        return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b))
+        return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b));
     }
 
     private sleep(miliseconds: number) {
-        return new Promise(r => setTimeout(r, miliseconds))
+        return new Promise(r => setTimeout(r, miliseconds));
     };
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
@@ -70,6 +70,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         return this.openai.createCompletion({
             model: "fastertransformer",
             prompt: prompt as CreateCompletionRequestPrompt,
+            /* eslint-disable-next-line @typescript-eslint/naming-convention */
             max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
             temperature: 0.1
         });
