@@ -1,8 +1,14 @@
 {
   "name": "fauxpilot",
-  "displayName": "fauxpilot",
-  "description": "",
-  "version": "0.0.3",
+  "displayName": "Fauxpilot",
+  "description": "Get completions from Fauxpilot server",
+  "version": "1.0.0",
+  "keywords": [
+    "code-suggestion",
+    "copilot",
+    "code-inference",
+    "fauxpilot"
+  ],
   "repository": {
     "url": "https://github.com/Venthe/vscode-fauxpilot"
   },
@@ -11,22 +17,31 @@
   "engines": {
     "vscode": "^1.70.0"
   },
+  "bugs": {
+    "url": "https://github.com/Venthe/vscode-fauxpilot/issues"
+  },
   "categories": [
     "Other"
   ],
   "activationEvents": [
     "onStartupFinished"
   ],
+  "author": {
+    "name": "Jacek Lipiec",
+    "url": "https://jaceklipiec.eu/"
+  },
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "fauxpilot.enable",
-        "title": "Enable fauxpilot"
+        "shortTitle": "Enable Fauxpilot",
+        "title": "Enable Fauxpilot"
       },
       {
         "command": "fauxpilot.disable",
-        "title": "Disable fauxpilot"
+        "title": "Disable Fauxpilot",
+        "shortTitle": "Disable Fauxpilot"
       }
     ],
     "configuration": {
