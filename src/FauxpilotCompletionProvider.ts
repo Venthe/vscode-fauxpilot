@@ -1,7 +1,7 @@
 import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse, OpenAIApi } from 'openai';
 import { CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range, TextDocument, workspace } from 'vscode';
 import { AxiosResponse } from 'axios';
-import { uuidv4 } from './Uuid';
+import { nextId } from './Uuid';
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
     cachedPrompts: Map<string, number> = new Map<string, number>();
@@ -18,7 +18,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             console.debug("Extension not enabled, skipping.");
             return Promise.resolve(([] as InlineCompletionItem[]));
         }
-        
+
         const prompt = this.getPrompt(document, position);
         console.debug("Requesting completion for prompt", prompt);
 
@@ -28,7 +28,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         }
 
         const currentTimestamp = Date.now();
-        const currentId = uuidv4();
+        const currentId = nextId();
         this.cachedPrompts.set(currentId, currentTimestamp);
         await this.sleep(workspace.getConfiguration('fauxpilot').get("suggestionDelay") as number)
         if (currentTimestamp < this.newestTimestamp()) {
