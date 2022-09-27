@@ -61,8 +61,8 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b));
     }
 
-    private sleep(miliseconds: number) {
-        return new Promise(r => setTimeout(r, miliseconds));
+    private sleep(milliseconds: number) {
+        return new Promise(r => setTimeout(r, milliseconds));
     };
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
