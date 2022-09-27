@@ -12,7 +12,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
 
     //@ts-ignore
-    // becasue ASYNC and PROMISE
+    // because ASYNC and PROMISE
     public async provideInlineCompletionItems(document: TextDocument, position: Position, context: InlineCompletionContext, token: CancellationToken): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
         if (!workspace.getConfiguration('fauxpilot').get("enabled")) {
             console.debug("Extension not enabled, skipping.");
@@ -61,8 +61,8 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b));
     }
 
-    private sleep(miliseconds: number) {
-        return new Promise(r => setTimeout(r, miliseconds));
+    private sleep(milliseconds: number) {
+        return new Promise(r => setTimeout(r, milliseconds));
     };
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
@@ -81,5 +81,3 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             .map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
     }
 }
-
-
