@@ -82,12 +82,17 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
         console.debug("Calling OpenAi", prompt);
+
+        //check if inline completion is enabled
+        const stop_words = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
+        console.debug("Calling OpenAi with stop words = ", stop_words);
         return this.openai.createCompletion({
             model: "fastertransformer",
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
             max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
-            temperature: 0.1
+            temperature: 0.1,
+            stop: stop_words
         });
     }
 
