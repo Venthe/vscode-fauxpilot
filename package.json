@@ -57,7 +57,7 @@
         },
         "fauxpilot.maxTokens": {
           "type": "number",
-          "default": 4
+          "default": 200
         },
         "fauxpilot.maxLines": {
           "type": "number",
