@@ -22,5 +22,10 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '16'
+      - name: Setup DISPLAY variables
+        shell: bash
+        run: |
+          export DISPLAY=':99.0'
+          /usr/bin/Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
       - run: npm ci
       - run: npm test
