@@ -1,0 +1,38 @@
+on:
+  - workflow_dispatch
+name: Release to github
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js v16
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+      - run: npm ci
+      - run: npm run --silent -- vscode:package
+      - run: |
+          EXTENSION_FILE=$(ls fauxpilot-*.vsix) >> $GITHUB_ENV
+          PACKAGE_VERSION=$(npx -c 'echo "$npm_package_version"') >> $GITHUB_ENV
+        id: data
+      - name: release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ steps.data.outputs.PACKAGE_VERSION }}
+          tag_name: ${{ github.ref }}
+          body_path: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: upload extension
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.data.outputs.EXTENSION_FILE }}
+          asset_name: ${{ steps.data.outputs.EXTENSION_FILE }}
+          asset_content_type: application/zip
