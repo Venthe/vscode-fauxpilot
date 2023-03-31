@@ -1,4 +1,5 @@
 on:
+  - workflow_call
   - workflow_dispatch
 name: Release to Github
 jobs:
@@ -24,6 +25,3 @@ jobs:
           fail_on_unmatched_files: true
           files: ${{ steps.data.outputs.ASSET }}
           generate_release_notes: true
-  deploy-to-marketplaces:
-    needs: github-release
-    uses: ./.github/workflows/market-deploy.yml
