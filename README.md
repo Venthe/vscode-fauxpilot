@@ -5,6 +5,7 @@
 [![Stargazers][stars-shield]][stars-url]
 [![Issues][issues-shield]][issues-url]
 [![MIT License][license-shield]][license-url]
+[![Test](https://github.com/Venthe/vscode-fauxpilot/actions/workflows/test.yml/badge.svg)](https://github.com/Venthe/vscode-fauxpilot/actions/workflows/test.yml)
 
 Please be aware! For this extension to work you have to set up [Fauxpilot server](https://github.com/moyix/fauxpilot) by @moyix
 
