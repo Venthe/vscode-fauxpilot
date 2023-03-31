@@ -24,3 +24,6 @@ jobs:
           fail_on_unmatched_files: true
           files: ${{ steps.data.outputs.ASSET }}
           generate_release_notes: true
+  deploy-to-stores:
+    needs: github-release
+    uses: ./.github/workflows/deploy.yml
