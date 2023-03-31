@@ -13,7 +13,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private request_status: string = "done";
 
     //@ts-ignore
-    // becasue ASYNC and PROMISE
+    // because ASYNC and PROMISE
     public async provideInlineCompletionItems(document: TextDocument, position: Position, context: InlineCompletionContext, token: CancellationToken): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
         if (!workspace.getConfiguration('fauxpilot').get("enabled")) {
             console.debug("Extension not enabled, skipping.");
@@ -76,8 +76,8 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b));
     }
 
-    private sleep(miliseconds: number) {
-        return new Promise(r => setTimeout(r, miliseconds));
+    private sleep(milliseconds: number) {
+        return new Promise(r => setTimeout(r, milliseconds));
     };
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
@@ -87,11 +87,11 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         const stop_words = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
         console.debug("Calling OpenAi with stop words = ", stop_words);
         return this.openai.createCompletion({
-            model: "fastertransformer",
+            model: workspace.getConfiguration('fauxpilot').get("model") ?? "<<UNSET>>",
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
             max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
-            temperature: 0.1,
+            temperature: workspace.getConfiguration('fauxpilot').get("temperature"),
             stop: stop_words
         });
     }
@@ -101,5 +101,3 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             .map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
     }
 }
-
-
