@@ -1,28 +1,9 @@
 on:
-  workflow_call: {}
   push:
     tags:
       - "*"
-
-name: Deploy Extension
+name: On tag push
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js v16
-        uses: actions/setup-node@v3
-        with:
-          node-version: "16"
-      - run: npm ci
-      - name: Publish to Open VSX Registry
-        uses: HaaLeo/publish-vscode-extension@v1
-        id: publishToOpenVSX
-        with:
-          pat: ${{ secrets.OPEN_VSX_TOKEN }}
-      - name: Publish to Visual Studio Marketplace
-        uses: HaaLeo/publish-vscode-extension@v1
-        with:
-          pat: ${{ secrets.VS_MARKETPLACE_TOKEN }}
-          registryUrl: https://marketplace.visualstudio.com
-          extensionFile: ${{ steps.publishToOpenVSX.outputs.vsixPath }}
+  deploy-to-marketplaces:
+    needs: github-release
+    uses: ./.github/workflows/market-deploy.yml

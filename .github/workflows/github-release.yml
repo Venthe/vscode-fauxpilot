@@ -1,6 +1,6 @@
 on:
   - workflow_dispatch
-name: Release to github
+name: Release to Github
 jobs:
   github-release:
     runs-on: ubuntu-latest
@@ -24,6 +24,6 @@ jobs:
           fail_on_unmatched_files: true
           files: ${{ steps.data.outputs.ASSET }}
           generate_release_notes: true
-  deploy-to-stores:
+  deploy-to-marketplaces:
     needs: github-release
-    uses: ./.github/workflows/deploy.yml
+    uses: ./.github/workflows/market-deploy.yml
