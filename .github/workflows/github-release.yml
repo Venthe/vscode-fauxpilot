@@ -1,0 +1,26 @@
+on:
+  - workflow_dispatch
+name: Release to github
+jobs:
+  github-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Use Node.js v16
+        uses: actions/setup-node@v3
+        with:
+          node-version: "16"
+      - run: npm ci
+      - run: npm run --silent -- vscode:package
+      - run: |
+          echo "ASSET=$(ls fauxpilot-*.vsix)" >> $GITHUB_OUTPUT
+          echo "PACKAGE_VERSION=$(npx -c 'echo "$npm_package_version"')" >> $GITHUB_OUTPUT
+        id: data
+      - uses: softprops/action-gh-release@v1
+        with:
+          draft: false
+          body_path: CHANGELOG.md
+          tag_name: ${{ steps.data.outputs.PACKAGE_VERSION }}
+          fail_on_unmatched_files: true
+          files: ${{ steps.data.outputs.ASSET }}
+          generate_release_notes: true
