@@ -78,6 +78,10 @@
         "fauxpilot.enabled": {
           "type": "boolean",
           "default": true
+        },
+        "fauxpilot.inlineCompletion": {
+          "type": "boolean",
+          "default": true
         }
       }
     }

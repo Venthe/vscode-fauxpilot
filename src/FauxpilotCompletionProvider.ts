@@ -10,6 +10,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         apiKey: "dummy"
     });
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
+    private request_status: string = "done";
 
     //@ts-ignore
     // because ASYNC and PROMISE
@@ -30,19 +31,33 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         const currentTimestamp = Date.now();
         const currentId = nextId();
         this.cachedPrompts.set(currentId, currentTimestamp);
-        await this.sleep(workspace.getConfiguration('fauxpilot').get("suggestionDelay") as number);
-        if (currentTimestamp < this.newestTimestamp()) {
-            console.debug("Newer request is present, skipping");
-            this.cachedPrompts.delete(currentId);
-            return Promise.resolve(([] as InlineCompletionItem[]));
+
+        // check there is no newer request util this.request_status is done
+        while (this.request_status === "pending") {
+            await this.sleep(200);
+            console.debug("current id = ", currentId, " request status = ", this.request_status);
+            if (this.newestTimestamp() > currentTimestamp) {
+                console.debug("newest timestamp=", this.newestTimestamp(), "current timestamp=", currentTimestamp);
+                console.debug("Newer request is pending, skipping");
+                this.cachedPrompts.delete(currentId);
+                return Promise.resolve(([] as InlineCompletionItem[]));
+            }
         }
 
-        // Prompt is already nil-checked
-        const response = await this.callOpenAi(prompt as String);
-        console.debug("Got response from OpenAi", response);
-        const completions = this.toInlineCompletions(response.data, position);
-        console.debug("Transformed completions", completions);
-        return Promise.resolve(completions);
+        console.debug("current id = ", currentId, "set request status to pending");
+        this.request_status = "pending";
+        return this.callOpenAi(prompt as String).then((response) => {
+            console.debug("current id = ", currentId, "set request status to done");
+            this.request_status = "done";
+            this.cachedPrompts.delete(currentId);
+            return this.toInlineCompletions(response.data, position);
+        }).catch((error) => {
+            console.debug("current id = ", currentId, "set request status to done");
+            this.request_status = "done";
+            this.cachedPrompts.delete(currentId);
+            console.error(error);
+            return ([] as InlineCompletionItem[]);
+        });
     }
 
     private getPrompt(document: TextDocument, position: Position): String | undefined {
@@ -67,12 +82,17 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
         console.debug("Calling OpenAi", prompt);
+
+        //check if inline completion is enabled
+        const stop_words = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
+        console.debug("Calling OpenAi with stop words = ", stop_words);
         return this.openai.createCompletion({
             model: workspace.getConfiguration('fauxpilot').get("model") ?? "<<UNSET>>",
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
             max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
-            temperature: workspace.getConfiguration('fauxpilot').get("temperature")
+            temperature: workspace.getConfiguration('fauxpilot').get("temperature"),
+            stop: stop_words
         });
     }
 
