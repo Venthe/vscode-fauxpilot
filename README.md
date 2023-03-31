@@ -1,10 +1,10 @@
 # Visual Studio Code - Fauxpilot Client
 
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
+[![GitHub contributors](https://img.shields.io/github/contributors/venthe/vscode-fauxpilot)](https://github.com/Venthe/vscode-fauxpilot/graphs/contributors)
+[![Forks](https://img.shields.io/github/forks/Venthe/vscode-fauxpilot?style=social)](https://github.com/Venthe/vscode-fauxpilot/forks)
+[![Stars](https://img.shields.io/github/stars/venthe/vscode-fauxpilot?style=social)](https://github.com/Venthe/vscode-fauxpilot/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/venthe/vscode-fauxpilot)](https://github.com/Venthe/vscode-fauxpilot/issues)
+[![License](https://img.shields.io/github/license/venthe/vscode-fauxpilot)](https://github.com/Venthe/vscode-fauxpilot/blob/main/LICENSE.md)
 [![Test](https://github.com/Venthe/vscode-fauxpilot/actions/workflows/test.yml/badge.svg)](https://github.com/Venthe/vscode-fauxpilot/actions/workflows/test.yml)
 
 Please be aware! For this extension to work you have to set up [Fauxpilot server](https://github.com/moyix/fauxpilot) by @moyix
