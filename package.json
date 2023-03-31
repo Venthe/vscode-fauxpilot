@@ -63,6 +63,10 @@
           "type": "number",
           "default": 200
         },
+        "fauxpilot.temperature": {
+          "type": "number",
+          "default": 0.1
+        },
         "fauxpilot.maxLines": {
           "type": "number",
           "default": 150

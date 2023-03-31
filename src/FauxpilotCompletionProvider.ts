@@ -72,7 +72,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
             max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
-            temperature: 0.1
+            temperature: workspace.getConfiguration('fauxpilot').get("temperature")
         });
     }
 
