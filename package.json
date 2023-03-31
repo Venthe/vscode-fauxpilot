@@ -55,6 +55,10 @@
           "type": "string",
           "default": "codegen"
         },
+        "fauxpilot.model": {
+          "type": "string",
+          "default": "fastertransformer"
+        },
         "fauxpilot.maxTokens": {
           "type": "number",
           "default": 200

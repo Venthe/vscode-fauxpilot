@@ -68,7 +68,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
         console.debug("Calling OpenAi", prompt);
         return this.openai.createCompletion({
-            model: "fastertransformer",
+            model: workspace.getConfiguration('fauxpilot').get("model") ?? "<<UNSET>>",
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
             max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
