@@ -60,6 +60,10 @@
           "type": "string",
           "default": "fastertransformer"
         },
+        "fauxpilot.token": {
+          "type": "string",
+          "default": "dummy"
+        },
         "fauxpilot.maxTokens": {
           "type": "number",
           "default": 200

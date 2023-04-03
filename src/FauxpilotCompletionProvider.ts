@@ -7,7 +7,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     cachedPrompts: Map<string, number> = new Map<string, number>();
 
     private configuration: Configuration = new Configuration({
-        apiKey: "dummy"
+        apiKey: workspace.getConfiguration('fauxpilot').get("token")
     });
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
     private request_status: string = "done";
