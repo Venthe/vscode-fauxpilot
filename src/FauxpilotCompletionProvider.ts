@@ -55,6 +55,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
         console.debug("current id = ", currentId, "set request status to pending");
         this.request_status = "pending";
+        this.status_bar.tooltip = "Fauxpilot - Working";
         this.status_bar.text = "$(loading~spin)";
 
         return this.callOpenAi(prompt as String).then((response) => {
