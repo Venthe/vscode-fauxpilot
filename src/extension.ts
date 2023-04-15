@@ -10,17 +10,17 @@ import { stat } from 'fs';
 export function activate(context: ExtensionContext) {
 	console.debug("Registering Fauxpilot provider", new Date());
 
-	const configuration = workspace.getConfiguration();
-
 	const statusBar = window.createStatusBarItem(StatusBarAlignment.Right);
 	statusBar.text = "$(light-bulb)";
-	statusBar.tooltip = `Fauxpilot - ${configuration.get('fauxpilot.enabled') ? "Enabled" : "Disabled"}`;
+	statusBar.tooltip = `Fauxpilot - Ready`;
 
-	const statusUpdateCallback = (callback: any) =>{
-		return ()=>{
-			statusBar.tooltip = `Fauxpilot - ${configuration.get('fauxpilot.enabled') ? "Enabled" : "Disabled"}`;
-			callback();
-		};
+	const statusUpdateCallback = (callback: any, showIcon: boolean) => async () => {
+		await callback();
+		if (showIcon) {
+			statusBar.show();
+		} else {
+			statusBar.hide();
+		}
 	};
 
 	context.subscriptions.push(
@@ -28,12 +28,14 @@ export function activate(context: ExtensionContext) {
 			{ pattern: "**" }, new FauxpilotCompletionProvider(statusBar)
 		),
 
-		commands.registerCommand(turnOnFauxpilot.command, statusUpdateCallback(turnOnFauxpilot.callback)),
-		commands.registerCommand(turnOffFauxpilot.command, statusUpdateCallback(turnOffFauxpilot.callback)),
+		commands.registerCommand(turnOnFauxpilot.command, statusUpdateCallback(turnOnFauxpilot.callback, true)),
+		commands.registerCommand(turnOffFauxpilot.command, statusUpdateCallback(turnOffFauxpilot.callback, false)),
 		statusBar
 	);
 
-	statusBar.show();
+	if (workspace.getConfiguration('fauxpilot').get("enabled")) {
+		statusBar.show();
+	}
 }
 
 // this method is called when your extension is deactivated
