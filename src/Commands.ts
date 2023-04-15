@@ -8,7 +8,13 @@ function setExtensionStatus(enabled: boolean) {
     configuration.update('fauxpilot.enabled', enabled, target, false).then(console.error);
 }
 
+
 export type Command = { command: string, callback: (...args: any[]) => any, thisArg?: any };
+
+export const toggleFauxpilot: Command = {
+    command: "fauxpilot.toggle",
+    callback: () => setExtensionStatus(!configuration.get('fauxpilot.enabled'))
+};
 
 export const turnOnFauxpilot: Command = {
     command: "fauxpilot.enable",

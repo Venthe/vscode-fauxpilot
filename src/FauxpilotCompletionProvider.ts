@@ -1,16 +1,25 @@
 import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse, OpenAIApi } from 'openai';
-import { CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range, TextDocument, workspace } from 'vscode';
+import { CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range, TextDocument, workspace, StatusBarItem } from 'vscode';
 import { AxiosResponse } from 'axios';
 import { nextId } from './Uuid';
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
     cachedPrompts: Map<string, number> = new Map<string, number>();
 
+    
+
+
     private configuration: Configuration = new Configuration({
         apiKey: workspace.getConfiguration('fauxpilot').get("token")
     });
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
     private request_status: string = "done";
+    private status_bar: StatusBarItem;
+
+    constructor(sbar: StatusBarItem){
+        this.status_bar = sbar;
+    }
+
 
     //@ts-ignore
     // because ASYNC and PROMISE
@@ -46,16 +55,20 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
         console.debug("current id = ", currentId, "set request status to pending");
         this.request_status = "pending";
+        this.status_bar.text = "$(loading~spin)";
+
         return this.callOpenAi(prompt as String).then((response) => {
             console.debug("current id = ", currentId, "set request status to done");
             this.request_status = "done";
             this.cachedPrompts.delete(currentId);
+            this.status_bar.text = "$(light-bulb)";
             return this.toInlineCompletions(response.data, position);
         }).catch((error) => {
             console.debug("current id = ", currentId, "set request status to done");
             this.request_status = "done";
             this.cachedPrompts.delete(currentId);
             console.error(error);
+            this.status_bar.text = "$(alert)";
             return ([] as InlineCompletionItem[]);
         });
     }
