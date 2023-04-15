@@ -1,7 +1,7 @@
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
 import { commands, ExtensionContext, languages, StatusBarAlignment, window, workspace} from 'vscode';
-import { toggleFauxpilot, turnOffFauxpilot, turnOnFauxpilot } from './Commands';
+import { turnOffFauxpilot, turnOnFauxpilot } from './Commands';
 import { FauxpilotCompletionProvider } from './FauxpilotCompletionProvider';
 import { stat } from 'fs';
 
@@ -28,10 +28,8 @@ export function activate(context: ExtensionContext) {
 			{ pattern: "**" }, new FauxpilotCompletionProvider(statusBar)
 		),
 
-
 		commands.registerCommand(turnOnFauxpilot.command, statusUpdateCallback(turnOnFauxpilot.callback)),
 		commands.registerCommand(turnOffFauxpilot.command, statusUpdateCallback(turnOffFauxpilot.callback)),
-		commands.registerCommand(toggleFauxpilot.command, statusUpdateCallback(toggleFauxpilot.callback)),
 		statusBar
 	);
 
