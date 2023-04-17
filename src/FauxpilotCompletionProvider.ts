@@ -1,20 +1,38 @@
 import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse, OpenAIApi } from 'openai';
 import { CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range, TextDocument, workspace, StatusBarItem } from 'vscode';
 import { AxiosResponse } from 'axios';
-import { nextId } from './Uuid';
+import { debounce } from './utilities';
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
-    cachedPrompts: Map<string, number> = new Map<string, number>();
-
+    // TODO: Make dynamic
+    //  AFAIK VSCode creates provider once. As such, token will never be updated
     private configuration: Configuration = new Configuration({
         apiKey: workspace.getConfiguration('fauxpilot').get("token")
     });
+    // TODO: Make dynamic
+    //  AFAIK VSCode creates provider once. As such, server address will never be updated
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
-    private requestStatus: string = "done";
-    private statusBar: StatusBarItem;
+    private readonly debouncedApiCall: any = debounce(
+        // TODO: Extract to method.
+        //  I absolutely forgot how to handle 'this' context in JS. Simple extraction makes this
+        //  undefined. How to bind it?
+        (prompt: string, position: Position) => {
+            return new Promise(resolve => {
+                console.debug("Requesting completion after debounce period");
+                this.statusBar.tooltip = "Fauxpilot - Working";
+                this.statusBar.text = "$(loading~spin)";
+                this.callOpenAi(prompt).then((response) => {
+                    this.statusBar.text = "$(light-bulb)";
+                    resolve(this.toInlineCompletions(response.data, position));
+                }).catch((error) => {
+                    this.statusBar.text = "$(alert)";
+                    console.error(error);
+                    resolve(([] as InlineCompletionItem[]));
+                });
+            });
+        }, { timeout: workspace.getConfiguration('fauxpilot').get("suggestionDelay") as number, defaultReturn: [] });
 
-    constructor(statusBar: StatusBarItem){
-        this.statusBar = statusBar;
+    constructor(private statusBar: StatusBarItem, private testCompletion?: any) {
     }
 
     //@ts-ignore
@@ -26,46 +44,14 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         }
 
         const prompt = this.getPrompt(document, position);
-        console.debug("Requesting completion for prompt", prompt);
 
         if (this.isNil(prompt)) {
             console.debug("Prompt is empty, skipping");
             return Promise.resolve(([] as InlineCompletionItem[]));
         }
 
-        const currentTimestamp = Date.now();
-        const currentId = nextId();
-        this.cachedPrompts.set(currentId, currentTimestamp);
-
-        // check there is no newer request util this.request_status is done
-        while (this.requestStatus === "pending") {
-            await this.sleep(200);
-            console.debug("current id = ", currentId, " request status = ", this.requestStatus);
-            if (this.newestTimestamp() > currentTimestamp) {
-                console.debug("newest timestamp=", this.newestTimestamp(), "current timestamp=", currentTimestamp);
-                console.debug("Newer request is pending, skipping");
-                this.cachedPrompts.delete(currentId);
-                return Promise.resolve(([] as InlineCompletionItem[]));
-            }
-        }
-
-        console.debug("current id = ", currentId, "set request status to pending");
-        this.requestStatus = "pending";
-        this.statusBar.tooltip = "Fauxpilot - Working";
-        this.statusBar.text = "$(loading~spin)";
-
-        return this.callOpenAi(prompt as String).then((response) => {
-            this.statusBar.text = "$(light-bulb)";
-            return this.toInlineCompletions(response.data, position);
-        }).catch((error) => {
-            console.error(error);
-            this.statusBar.text = "$(alert)";
-            return ([] as InlineCompletionItem[]);
-        }).finally(() => {
-            console.debug("current id = ", currentId, "set request status to done");
-            this.requestStatus = "done";
-            this.cachedPrompts.delete(currentId);
-        });
+        console.debug("Requesting completion for prompt", prompt);
+        return this.debouncedApiCall(prompt, position);
     }
 
     private getPrompt(document: TextDocument, position: Position): String | undefined {
@@ -80,21 +66,16 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         return value === undefined || value === null || value.length === 0;
     }
 
-    private newestTimestamp() {
-        return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b));
-    }
-
-    private sleep(milliseconds: number) {
-        return new Promise(r => setTimeout(r, milliseconds));
-    };
-
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
         console.debug("Calling OpenAi", prompt);
 
-        //check if inline completion is enabled
+        // FIXME: I do not understand my own comment below. To verify
+        //  check if inline completion is enabled
         const stopWords = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
         console.debug("Calling OpenAi with stop words = ", stopWords);
-        return this.openai.createCompletion({
+        // FIXME: how to mock in mocha?
+        //  Current implementation works by injecting alternative provider via constructor
+        return (this.testCompletion ?? this.openai).createCompletion({
             model: workspace.getConfiguration('fauxpilot').get("model") ?? "<<UNSET>>",
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
