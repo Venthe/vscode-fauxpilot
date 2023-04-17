@@ -3,7 +3,6 @@
 import { commands, ExtensionContext, languages, StatusBarAlignment, window, workspace} from 'vscode';
 import { turnOffFauxpilot, turnOnFauxpilot } from './Commands';
 import { FauxpilotCompletionProvider } from './FauxpilotCompletionProvider';
-import { stat } from 'fs';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
