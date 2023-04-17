@@ -10,11 +10,11 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         apiKey: workspace.getConfiguration('fauxpilot').get("token")
     });
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
-    private request_status: string = "done";
-    private status_bar: StatusBarItem;
+    private requestStatus: string = "done";
+    private statusBar: StatusBarItem;
 
-    constructor(sbar: StatusBarItem){
-        this.status_bar = sbar;
+    constructor(statusBar: StatusBarItem){
+        this.statusBar = statusBar;
     }
 
     //@ts-ignore
@@ -38,9 +38,9 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         this.cachedPrompts.set(currentId, currentTimestamp);
 
         // check there is no newer request util this.request_status is done
-        while (this.request_status === "pending") {
+        while (this.requestStatus === "pending") {
             await this.sleep(200);
-            console.debug("current id = ", currentId, " request status = ", this.request_status);
+            console.debug("current id = ", currentId, " request status = ", this.requestStatus);
             if (this.newestTimestamp() > currentTimestamp) {
                 console.debug("newest timestamp=", this.newestTimestamp(), "current timestamp=", currentTimestamp);
                 console.debug("Newer request is pending, skipping");
@@ -50,22 +50,22 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         }
 
         console.debug("current id = ", currentId, "set request status to pending");
-        this.request_status = "pending";
-        this.status_bar.tooltip = "Fauxpilot - Working";
-        this.status_bar.text = "$(loading~spin)";
+        this.requestStatus = "pending";
+        this.statusBar.tooltip = "Fauxpilot - Working";
+        this.statusBar.text = "$(loading~spin)";
 
         return this.callOpenAi(prompt as String).then((response) => {
             console.debug("current id = ", currentId, "set request status to done");
-            this.request_status = "done";
+            this.requestStatus = "done";
             this.cachedPrompts.delete(currentId);
-            this.status_bar.text = "$(light-bulb)";
+            this.statusBar.text = "$(light-bulb)";
             return this.toInlineCompletions(response.data, position);
         }).catch((error) => {
             console.debug("current id = ", currentId, "set request status to done");
-            this.request_status = "done";
+            this.requestStatus = "done";
             this.cachedPrompts.delete(currentId);
             console.error(error);
-            this.status_bar.text = "$(alert)";
+            this.statusBar.text = "$(alert)";
             return ([] as InlineCompletionItem[]);
         });
     }
@@ -94,15 +94,15 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         console.debug("Calling OpenAi", prompt);
 
         //check if inline completion is enabled
-        const stop_words = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
-        console.debug("Calling OpenAi with stop words = ", stop_words);
+        const stopWords = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
+        console.debug("Calling OpenAi with stop words = ", stopWords);
         return this.openai.createCompletion({
             model: workspace.getConfiguration('fauxpilot').get("model") ?? "<<UNSET>>",
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
             max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
             temperature: workspace.getConfiguration('fauxpilot').get("temperature"),
-            stop: stop_words
+            stop: stopWords
         });
     }
 
