@@ -55,18 +55,16 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         this.statusBar.text = "$(loading~spin)";
 
         return this.callOpenAi(prompt as String).then((response) => {
-            console.debug("current id = ", currentId, "set request status to done");
-            this.requestStatus = "done";
-            this.cachedPrompts.delete(currentId);
             this.statusBar.text = "$(light-bulb)";
             return this.toInlineCompletions(response.data, position);
         }).catch((error) => {
-            console.debug("current id = ", currentId, "set request status to done");
-            this.requestStatus = "done";
-            this.cachedPrompts.delete(currentId);
             console.error(error);
             this.statusBar.text = "$(alert)";
             return ([] as InlineCompletionItem[]);
+        }).finally(() => {
+            console.debug("current id = ", currentId, "set request status to done");
+            this.requestStatus = "done";
+            this.cachedPrompts.delete(currentId);
         });
     }
 
