@@ -2,6 +2,7 @@ import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse,
 import { CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range, TextDocument, workspace, StatusBarItem } from 'vscode';
 import { AxiosResponse } from 'axios';
 import { nextId } from './Uuid';
+import { LEADING_LINES_PROP } from './Constants';
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
     cachedPrompts: Map<string, number> = new Map<string, number>();
@@ -68,12 +69,24 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         });
     }
 
-    private getPrompt(document: TextDocument, position: Position): String | undefined {
-        const firstLine = Math.max(position.line - (workspace.getConfiguration('fauxpilot').get("maxLines") as number), 0);
+    private getPrompt(document: TextDocument, position: Position): String | undefined {        
+        const promptLinesCount = workspace.getConfiguration('fauxpilot').get("maxLines") as number;
 
-        return document.getText(
-            new Range(firstLine, 0, position.line, position.character)
-        );
+        /* 
+        Put entire file in prompt if it's small enough, otherwise only
+        take lines above the cursor and from the beginning of the file.
+        */
+        if (document.lineCount <= promptLinesCount) {
+            const range = new Range(0, 0, position.line, position.character);
+            return document.getText(range);
+        } else {
+            const leadingLinesCount = Math.floor(LEADING_LINES_PROP * promptLinesCount);
+            const prefixLinesCount = promptLinesCount - leadingLinesCount;
+            const firstPrefixLine = position.line - prefixLinesCount;
+            const prefix = document.getText(new Range(firstPrefixLine, 0, position.line, position.character));
+            const leading = document.getText(new Range(0, 0, leadingLinesCount, 0));
+            return leading + prefix;
+        }
     }
 
     private isNil(value: String | undefined | null): boolean {
