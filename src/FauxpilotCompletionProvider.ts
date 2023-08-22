@@ -1,8 +1,17 @@
 import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse, OpenAIApi } from 'openai';
-import { CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range, TextDocument, workspace, StatusBarItem } from 'vscode';
-import { AxiosResponse } from 'axios';
+import {
+    CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range,
+    TextDocument, workspace, StatusBarItem, OutputChannel, WorkspaceConfiguration
+} from 'vscode';
+import { AxiosResponse, AxiosRequestConfig } from 'axios';
 import { nextId } from './Uuid';
 import { LEADING_LINES_PROP } from './Constants';
+
+
+
+const http = require('http');
+const https = require('https');
+// const OpenAI = require('openai');
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
     cachedPrompts: Map<string, number> = new Map<string, number>();
@@ -13,24 +22,49 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
     private requestStatus: string = "done";
     private statusBar: StatusBarItem;
+    private outputChannel: OutputChannel;
+    private extConfig: WorkspaceConfiguration;
 
-    constructor(statusBar: StatusBarItem){
+    // this one seems doesn't work...
+    private requestConfig: AxiosRequestConfig;
+
+    constructor(statusBar: StatusBarItem, outputChannel: OutputChannel, extConfig: WorkspaceConfiguration) {
         this.statusBar = statusBar;
+        this.outputChannel = outputChannel;
+        this.extConfig = extConfig;
+
+        this.requestConfig = {
+            // arg from https://azureossd.github.io/2022/03/10/NodeJS-with-Keep-Alives-and-Connection-Reuse/
+            httpAgent: new http.Agent({
+                keepAlive: true,
+                maxSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
+                maxFreeSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
+                timeout: 60000, // active socket keepalive for 60 seconds
+                freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
+            }),
+            httpsAgent: new https.Agent({
+                keepAlive: true,
+                maxSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
+                maxFreeSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
+                timeout: 60000, // active socket keepalive for 30 seconds
+                freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
+            }),
+        };
     }
 
     //@ts-ignore
     // because ASYNC and PROMISE
     public async provideInlineCompletionItems(document: TextDocument, position: Position, context: InlineCompletionContext, token: CancellationToken): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
-        if (!workspace.getConfiguration('fauxpilot').get("enabled")) {
-            console.debug("Extension not enabled, skipping.");
+        if (!this.extConfig.get("enabled")) {
+            this.outputChannel.appendLine("Extension not enabled, skipping.");
             return Promise.resolve(([] as InlineCompletionItem[]));
         }
 
         const prompt = this.getPrompt(document, position);
-        console.debug("Requesting completion for prompt", prompt);
+        this.outputChannel.appendLine(`Requesting completion for prompt: $prompt`);
 
         if (this.isNil(prompt)) {
-            console.debug("Prompt is empty, skipping");
+            this.outputChannel.appendLine("Prompt is empty, skipping");
             return Promise.resolve(([] as InlineCompletionItem[]));
         }
 
@@ -40,37 +74,42 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
         // check there is no newer request util this.request_status is done
         while (this.requestStatus === "pending") {
+            this.outputChannel.appendLine("pending, and Waiting for response...");
             await this.sleep(200);
-            console.debug("current id = ", currentId, " request status = ", this.requestStatus);
+            this.outputChannel.appendLine("current id = " + currentId + " request status = " + this.requestStatus);
             if (this.newestTimestamp() > currentTimestamp) {
-                console.debug("newest timestamp=", this.newestTimestamp(), "current timestamp=", currentTimestamp);
-                console.debug("Newer request is pending, skipping");
+                this.outputChannel.appendLine("newest timestamp=" + this.newestTimestamp() + "current timestamp=" + currentTimestamp);
+                this.outputChannel.appendLine("Newer request is pending, skipping");
                 this.cachedPrompts.delete(currentId);
                 return Promise.resolve(([] as InlineCompletionItem[]));
             }
         }
 
-        console.debug("current id = ", currentId, "set request status to pending");
+        this.outputChannel.appendLine("current id = " + currentId + "set request status to pending");
         this.requestStatus = "pending";
         this.statusBar.tooltip = "Fauxpilot - Working";
         this.statusBar.text = "$(loading~spin)";
 
         return this.callOpenAi(prompt as String).then((response) => {
             this.statusBar.text = "$(light-bulb)";
-            return this.toInlineCompletions(response.data, position);
+            var result = this.toInlineCompletions(response.data, position);
+            this.outputChannel.appendLine("inline completions array length: " + result.length);
+            return result;
         }).catch((error) => {
-            console.error(error);
+            
+            this.outputChannel.appendLine(error.stack);
+            this.outputChannel.appendLine(error);
             this.statusBar.text = "$(alert)";
             return ([] as InlineCompletionItem[]);
         }).finally(() => {
-            console.debug("current id = ", currentId, "set request status to done");
+            this.outputChannel.appendLine("current id = " + currentId + "set request status to done");
             this.requestStatus = "done";
             this.cachedPrompts.delete(currentId);
         });
     }
 
-    private getPrompt(document: TextDocument, position: Position): String | undefined {        
-        const promptLinesCount = workspace.getConfiguration('fauxpilot').get("maxLines") as number;
+    private getPrompt(document: TextDocument, position: Position): String | undefined {
+        const promptLinesCount = this.extConfig.get("maxLines") as number;
 
         /* 
         Put entire file in prompt if it's small enough, otherwise only
@@ -102,23 +141,41 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     };
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
-        console.debug("Calling OpenAi", prompt);
+        // this.outputChannel.appendLine("Calling OpenAi: " + prompt + "\n prompt length: " + prompt.length);
+        this.outputChannel.appendLine("Calling OpenAi, prompt length: " + prompt.length);
 
         //check if inline completion is enabled
-        const stopWords = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
-        console.debug("Calling OpenAi with stop words = ", stopWords);
+        const stopWords = this.extConfig.get("inlineCompletion") ? ["\n"] : [];
+        this.outputChannel.appendLine("Calling OpenAi with stop words = " + stopWords);
+
         return this.openai.createCompletion({
-            model: workspace.getConfiguration('fauxpilot').get("model") ?? "<<UNSET>>",
+            model: this.extConfig.get("model") ?? "<<UNSET>>",
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
-            max_tokens: workspace.getConfiguration('fauxpilot').get("maxTokens"),
-            temperature: workspace.getConfiguration('fauxpilot').get("temperature"),
+            max_tokens: this.extConfig.get("maxTokens"),
+            temperature: this.extConfig.get("temperature"),
             stop: stopWords
         });
+        // }, this.requestConfig);
     }
 
     private toInlineCompletions(value: CreateCompletionResponse, position: Position): InlineCompletionItem[] {
-        return value.choices?.map(choice => choice.text)
-            .map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
+        // return value.choices?.map(choice => choice.text)
+        //     .map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
+        if (!value.choices) {
+            return [];
+        }
+        
+        // it seems always return 1 choice.
+        var choice1Text = value.choices[0].text; 
+        if (!choice1Text) {
+            return [];
+        }
+
+        this.outputChannel.appendLine('Get choice text: ' + choice1Text);
+        this.outputChannel.appendLine('---------END-OF-CHOICE-TEXT-----------');
+
+        return [new InlineCompletionItem(choice1Text, new Range(position, position.translate(0, choice1Text.length)))];
     }
+
 }

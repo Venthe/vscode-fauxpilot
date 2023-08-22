@@ -13,6 +13,9 @@ export function activate(context: ExtensionContext) {
 	statusBar.text = "$(light-bulb)";
 	statusBar.tooltip = `Fauxpilot - Ready`;
 
+	let outputChannel = window.createOutputChannel("Fauxpilot");
+	var extConfig = workspace.getConfiguration("fauxpilot");
+
 	const statusUpdateCallback = (callback: any, showIcon: boolean) => async () => {
 		await callback();
 		if (showIcon) {
@@ -23,8 +26,9 @@ export function activate(context: ExtensionContext) {
 	};
 
 	context.subscriptions.push(
+
 		languages.registerInlineCompletionItemProvider(
-			{ pattern: "**" }, new FauxpilotCompletionProvider(statusBar)
+			extConfig.get("fileFilter", [{ pattern: "**" }]), new FauxpilotCompletionProvider(statusBar, outputChannel, extConfig)
 		),
 
 		commands.registerCommand(turnOnFauxpilot.command, statusUpdateCallback(turnOnFauxpilot.callback, true)),
