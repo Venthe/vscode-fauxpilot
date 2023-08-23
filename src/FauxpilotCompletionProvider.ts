@@ -19,7 +19,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private configuration: Configuration = new Configuration({
         apiKey: workspace.getConfiguration('fauxpilot').get("token")
     });
-    private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
+    private openai: OpenAIApi;
     private requestStatus: string = "done";
     private statusBar: StatusBarItem;
     private outputChannel: OutputChannel;
@@ -32,6 +32,9 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         this.statusBar = statusBar;
         this.outputChannel = outputChannel;
         this.extConfig = extConfig;
+        const baseUrl = `${extConfig.get("server")}/${extConfig.get("engine")}`;
+        this.outputChannel.appendLine(`openai baseUrl: ${baseUrl}`);
+        this.openai = new OpenAIApi(this.configuration, baseUrl);
 
         this.requestConfig = {
             // arg from https://azureossd.github.io/2022/03/10/NodeJS-with-Keep-Alives-and-Connection-Reuse/
