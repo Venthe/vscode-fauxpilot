@@ -90,7 +90,13 @@
         },
         "fauxpilot.fileFilter": {
           "type":"array",
-          "default": [ { "pattern": "**" }]
+          "default": [ { "pattern": "**" }],
+          "description": "Allow suggestion only for files matching given patterns; Reference: https://code.visualstudio.com/api/references/document-selector"
+        },
+        "fauxpilot.excludeFileExts": {
+          "type":"object",
+          "default" : {},
+          "description": "File extensions to exclude from suggestions. e.g: {\"md\": true} "
         }
       }
     }

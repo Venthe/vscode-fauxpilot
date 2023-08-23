@@ -14,7 +14,7 @@ export function activate(context: ExtensionContext) {
 	statusBar.tooltip = `Fauxpilot - Ready`;
 
 	let outputChannel = window.createOutputChannel("Fauxpilot");
-	var extConfig = workspace.getConfiguration("fauxpilot");
+	let extConfig = workspace.getConfiguration("fauxpilot");
 
 	const statusUpdateCallback = (callback: any, showIcon: boolean) => async () => {
 		await callback();
@@ -25,8 +25,7 @@ export function activate(context: ExtensionContext) {
 		}
 	};
 
-	context.subscriptions.push(
-
+	context.subscriptions.push(	
 		languages.registerInlineCompletionItemProvider(
 			extConfig.get("fileFilter", [{ pattern: "**" }]), new FauxpilotCompletionProvider(statusBar, outputChannel, extConfig)
 		),

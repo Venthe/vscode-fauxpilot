@@ -24,6 +24,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private statusBar: StatusBarItem;
     private outputChannel: OutputChannel;
     private extConfig: WorkspaceConfiguration;
+    private excludeFileExts: Array<String>;
 
     // this one seems doesn't work...
     private requestConfig: AxiosRequestConfig;
@@ -35,7 +36,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         const baseUrl = `${extConfig.get("server")}/${extConfig.get("engine")}`;
         this.outputChannel.appendLine(`openai baseUrl: ${baseUrl}`);
         this.openai = new OpenAIApi(this.configuration, baseUrl);
-
+        
         this.requestConfig = {
             // arg from https://azureossd.github.io/2022/03/10/NodeJS-with-Keep-Alives-and-Connection-Reuse/
             httpAgent: new http.Agent({
@@ -53,6 +54,15 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
                 freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
             }),
         };
+
+        this.excludeFileExts = [];
+        // let excludeFileExtsConfig = extConfig.get("excludeFileExts", new Map<String, Boolean>());
+        let excludeFileExtsConfig: { [key: string]: boolean } = extConfig.get("excludeFileExts", {});
+        for (const key in excludeFileExtsConfig as object) {
+            if (excludeFileExtsConfig[key]) {
+                this.excludeFileExts.push(key);
+            }
+        }
     }
 
     //@ts-ignore
@@ -62,7 +72,13 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             this.outputChannel.appendLine("Extension not enabled, skipping.");
             return Promise.resolve(([] as InlineCompletionItem[]));
         }
-
+        var fileExt = document.fileName.split('.').pop();
+        if (fileExt && this.excludeFileExts.includes(fileExt)) {
+            // check if fileExt in array excludeFileExts
+            this.outputChannel.appendLine("Ignore file ext: " + fileExt);
+            return [];
+        }
+        
         const prompt = this.getPrompt(document, position);
         this.outputChannel.appendLine(`Requesting completion for prompt: $prompt`);
 
@@ -99,7 +115,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             this.outputChannel.appendLine("inline completions array length: " + result.length);
             return result;
         }).catch((error) => {
-            
+            this.outputChannel.appendLine("prompt: " + prompt);
             this.outputChannel.appendLine(error.stack);
             this.outputChannel.appendLine(error);
             this.statusBar.text = "$(alert)";
@@ -109,6 +125,9 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             this.requestStatus = "done";
             this.cachedPrompts.delete(currentId);
         });
+
+        // end of 
+
     }
 
     private getPrompt(document: TextDocument, position: Position): String | undefined {
@@ -177,6 +196,9 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
         this.outputChannel.appendLine('Get choice text: ' + choice1Text);
         this.outputChannel.appendLine('---------END-OF-CHOICE-TEXT-----------');
+        if (choice1Text.trim().length <= 0) {
+            return [];
+        }
 
         return [new InlineCompletionItem(choice1Text, new Range(position, position.translate(0, choice1Text.length)))];
     }
