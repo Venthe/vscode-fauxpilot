@@ -3,6 +3,7 @@
 import { commands, ExtensionContext, languages, StatusBarAlignment, window, workspace} from 'vscode';
 import { turnOffFauxpilot, turnOnFauxpilot } from './Commands';
 import { FauxpilotCompletionProvider } from './FauxpilotCompletionProvider';
+import { fauxpilotClient } from './FauxpilotClient';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -16,6 +17,9 @@ export function activate(context: ExtensionContext) {
 	let outputChannel = window.createOutputChannel("Fauxpilot");
 	let extConfig = workspace.getConfiguration("fauxpilot");
 
+	fauxpilotClient.init(extConfig, outputChannel);
+	fauxpilotClient.log("Fauxpilot start.");
+
 	const statusUpdateCallback = (callback: any, showIcon: boolean) => async () => {
 		await callback();
 		if (showIcon) {
@@ -27,7 +31,7 @@ export function activate(context: ExtensionContext) {
 
 	context.subscriptions.push(	
 		languages.registerInlineCompletionItemProvider(
-			extConfig.get("fileFilter", [{ pattern: "**" }]), new FauxpilotCompletionProvider(statusBar, outputChannel, extConfig)
+			extConfig.get("fileFilter", [{ pattern: "**" }]), new FauxpilotCompletionProvider(statusBar, extConfig)
 		),
 
 		commands.registerCommand(turnOnFauxpilot.command, statusUpdateCallback(turnOnFauxpilot.callback, true)),
@@ -35,7 +39,14 @@ export function activate(context: ExtensionContext) {
 		statusBar
 	);
 
-	if (workspace.getConfiguration('fauxpilot').get("enabled")) {
+	workspace.onDidChangeConfiguration((event) => {
+		if (event.affectsConfiguration("fauxpilot")) {
+			fauxpilotClient.log("fauxpilot config has been changed, try to reload.");
+			fauxpilotClient.reload(workspace.getConfiguration("fauxpilot"));
+		}
+	});
+
+	if (fauxpilotClient.isEnabled) {
 		statusBar.show();
 	}
 }

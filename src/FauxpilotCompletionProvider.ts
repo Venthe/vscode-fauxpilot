@@ -4,14 +4,10 @@ import {
     TextDocument, workspace, StatusBarItem, OutputChannel, WorkspaceConfiguration
 } from 'vscode';
 import { AxiosResponse, AxiosRequestConfig } from 'axios';
-import { nextId } from './Uuid';
+import { nextId,delay } from './Utils';
 import { LEADING_LINES_PROP } from './Constants';
+import { fauxpilotClient } from './FauxpilotClient';
 
-
-
-const http = require('http');
-const https = require('https');
-// const OpenAI = require('openai');
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
     cachedPrompts: Map<string, number> = new Map<string, number>();
@@ -22,68 +18,48 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private openai: OpenAIApi;
     private requestStatus: string = "done";
     private statusBar: StatusBarItem;
-    private outputChannel: OutputChannel;
     private extConfig: WorkspaceConfiguration;
-    private excludeFileExts: Array<String>;
+    private userPressKeyCount = 0;
+    private baseUrl: string;
 
-    // this one seems doesn't work...
-    private requestConfig: AxiosRequestConfig;
-
-    constructor(statusBar: StatusBarItem, outputChannel: OutputChannel, extConfig: WorkspaceConfiguration) {
+    constructor(statusBar: StatusBarItem, extConfig: WorkspaceConfiguration) {
         this.statusBar = statusBar;
-        this.outputChannel = outputChannel;
         this.extConfig = extConfig;
-        const baseUrl = `${extConfig.get("server")}/${extConfig.get("engine")}`;
-        this.outputChannel.appendLine(`openai baseUrl: ${baseUrl}`);
-        this.openai = new OpenAIApi(this.configuration, baseUrl);
-        
-        this.requestConfig = {
-            // arg from https://azureossd.github.io/2022/03/10/NodeJS-with-Keep-Alives-and-Connection-Reuse/
-            httpAgent: new http.Agent({
-                keepAlive: true,
-                maxSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
-                maxFreeSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
-                timeout: 60000, // active socket keepalive for 60 seconds
-                freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
-            }),
-            httpsAgent: new https.Agent({
-                keepAlive: true,
-                maxSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
-                maxFreeSockets: 6, // or 128 / os.cpus().length if running node across multiple CPUs
-                timeout: 60000, // active socket keepalive for 30 seconds
-                freeSocketTimeout: 30000, // free socket keepalive for 30 seconds
-            }),
-        };
-
-        this.excludeFileExts = [];
-        // let excludeFileExtsConfig = extConfig.get("excludeFileExts", new Map<String, Boolean>());
-        let excludeFileExtsConfig: { [key: string]: boolean } = extConfig.get("excludeFileExts", {});
-        for (const key in excludeFileExtsConfig as object) {
-            if (excludeFileExtsConfig[key]) {
-                this.excludeFileExts.push(key);
-            }
-        }
+        this.baseUrl = fauxpilotClient.BaseUrl;
+        this.openai = new OpenAIApi(this.configuration, this.baseUrl);
     }
 
     //@ts-ignore
     // because ASYNC and PROMISE
     public async provideInlineCompletionItems(document: TextDocument, position: Position, context: InlineCompletionContext, token: CancellationToken): ProviderResult<InlineCompletionItem[] | InlineCompletionList> {
-        if (!this.extConfig.get("enabled")) {
-            this.outputChannel.appendLine("Extension not enabled, skipping.");
+        if (!fauxpilotClient.isEnabled) {
+            fauxpilotClient.log("Extension not enabled, skipping.");
             return Promise.resolve(([] as InlineCompletionItem[]));
         }
+
         var fileExt = document.fileName.split('.').pop();
-        if (fileExt && this.excludeFileExts.includes(fileExt)) {
+        if (fileExt && fauxpilotClient.ExcludeFileExts.includes(fileExt)) {
             // check if fileExt in array excludeFileExts
-            this.outputChannel.appendLine("Ignore file ext: " + fileExt);
+            fauxpilotClient.log("Ignore file ext: " + fileExt);
             return [];
         }
         
+        let suggestionDelay = fauxpilotClient.SuggestionDelay;
+        if (suggestionDelay > 0) {
+            let holdPressId = ++this.userPressKeyCount;
+            fauxpilotClient.log(`try await ${suggestionDelay}, ${holdPressId}`);
+            await delay(suggestionDelay);
+            if (holdPressId != this.userPressKeyCount) {
+                return [];
+            }    
+            fauxpilotClient.log(`after await, ${holdPressId}, ${this.userPressKeyCount}`);
+        }
+
         const prompt = this.getPrompt(document, position);
-        this.outputChannel.appendLine(`Requesting completion for prompt: $prompt`);
+        fauxpilotClient.log(`Requesting completion for prompt: $prompt`);
 
         if (this.isNil(prompt)) {
-            this.outputChannel.appendLine("Prompt is empty, skipping");
+            fauxpilotClient.log("Prompt is empty, skipping");
             return Promise.resolve(([] as InlineCompletionItem[]));
         }
 
@@ -93,18 +69,18 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
         // check there is no newer request util this.request_status is done
         while (this.requestStatus === "pending") {
-            this.outputChannel.appendLine("pending, and Waiting for response...");
+            fauxpilotClient.log("pending, and Waiting for response...");
             await this.sleep(200);
-            this.outputChannel.appendLine("current id = " + currentId + " request status = " + this.requestStatus);
+            fauxpilotClient.log("current id = " + currentId + " request status = " + this.requestStatus);
             if (this.newestTimestamp() > currentTimestamp) {
-                this.outputChannel.appendLine("newest timestamp=" + this.newestTimestamp() + "current timestamp=" + currentTimestamp);
-                this.outputChannel.appendLine("Newer request is pending, skipping");
+                fauxpilotClient.log("newest timestamp=" + this.newestTimestamp() + "current timestamp=" + currentTimestamp);
+                fauxpilotClient.log("Newer request is pending, skipping");
                 this.cachedPrompts.delete(currentId);
                 return Promise.resolve(([] as InlineCompletionItem[]));
             }
         }
 
-        this.outputChannel.appendLine("current id = " + currentId + "set request status to pending");
+        fauxpilotClient.log("current id = " + currentId + "set request status to pending");
         this.requestStatus = "pending";
         this.statusBar.tooltip = "Fauxpilot - Working";
         this.statusBar.text = "$(loading~spin)";
@@ -112,16 +88,16 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         return this.callOpenAi(prompt as String).then((response) => {
             this.statusBar.text = "$(light-bulb)";
             var result = this.toInlineCompletions(response.data, position);
-            this.outputChannel.appendLine("inline completions array length: " + result.length);
+            fauxpilotClient.log("inline completions array length: " + result.length);
             return result;
         }).catch((error) => {
-            this.outputChannel.appendLine("prompt: " + prompt);
-            this.outputChannel.appendLine(error.stack);
-            this.outputChannel.appendLine(error);
+            fauxpilotClient.log("prompt: " + prompt);
+            fauxpilotClient.log(error.stack);
+            fauxpilotClient.log(error);
             this.statusBar.text = "$(alert)";
             return ([] as InlineCompletionItem[]);
         }).finally(() => {
-            this.outputChannel.appendLine("current id = " + currentId + "set request status to done");
+            fauxpilotClient.log("current id = " + currentId + "set request status to done");
             this.requestStatus = "done";
             this.cachedPrompts.delete(currentId);
         });
@@ -163,22 +139,26 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     };
 
     private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
-        // this.outputChannel.appendLine("Calling OpenAi: " + prompt + "\n prompt length: " + prompt.length);
-        this.outputChannel.appendLine("Calling OpenAi, prompt length: " + prompt.length);
+        // fauxpilotClient.log("Calling OpenAi: " + prompt + "\n prompt length: " + prompt.length);
+        fauxpilotClient.log("Calling OpenAi, prompt length: " + prompt.length);
 
         //check if inline completion is enabled
-        const stopWords = this.extConfig.get("inlineCompletion") ? ["\n"] : [];
-        this.outputChannel.appendLine("Calling OpenAi with stop words = " + stopWords);
+        const stopWords = fauxpilotClient.StopWords;
+
+        if (this.baseUrl != fauxpilotClient.BaseUrl) {
+            this.baseUrl = fauxpilotClient.BaseUrl;
+            this.openai = new OpenAIApi(this.configuration, this.baseUrl);
+        }
 
         return this.openai.createCompletion({
-            model: this.extConfig.get("model") ?? "<<UNSET>>",
+            model: fauxpilotClient.Model,
             prompt: prompt as CreateCompletionRequestPrompt,
             /* eslint-disable-next-line @typescript-eslint/naming-convention */
-            max_tokens: this.extConfig.get("maxTokens"),
-            temperature: this.extConfig.get("temperature"),
+            max_tokens: fauxpilotClient.MaxTokens,
+            temperature: fauxpilotClient.Temperature,
             stop: stopWords
         });
-        // }, this.requestConfig);
+        
     }
 
     private toInlineCompletions(value: CreateCompletionResponse, position: Position): InlineCompletionItem[] {
@@ -194,8 +174,8 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             return [];
         }
 
-        this.outputChannel.appendLine('Get choice text: ' + choice1Text);
-        this.outputChannel.appendLine('---------END-OF-CHOICE-TEXT-----------');
+        fauxpilotClient.log('Get choice text: ' + choice1Text);
+        fauxpilotClient.log('---------END-OF-CHOICE-TEXT-----------');
         if (choice1Text.trim().length <= 0) {
             return [];
         }
