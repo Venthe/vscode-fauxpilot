@@ -89,14 +89,31 @@
           "default": true
         },
         "fauxpilot.fileFilter": {
-          "type":"array",
-          "default": [ { "pattern": "**" }],
+          "type": "array",
+          "default": [
+            {
+              "pattern": "**"
+            }
+          ],
           "description": "Allow suggestion only for files matching given patterns; Reference: https://code.visualstudio.com/api/references/document-selector"
         },
         "fauxpilot.excludeFileExts": {
-          "type":"object",
-          "default" : {},
+          "type": "object",
+          "default": {},
           "description": "File extensions to exclude from suggestions. e.g: {\"md\": true} "
+        },
+        "fauxpilot.allowPending": {
+          "type": "boolean",
+          "defaultValue": true,
+          "description": "Allow wait previous request? If false, current `provideInlineCompletionItems` call will do nothing."
+        },
+        "fauxpilot.requestType": {
+          "type": "string",
+          "default": "openai",
+          "enum": [
+            "openai",
+            "axios"
+          ]
         }
       }
     }
@@ -132,6 +149,8 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
-    "openai": "^3.0.0"
+    "axios": "^1.5.0",
+    "http": "^0.0.1-security",
+    "openai": "^4.3.1"
   }
 }

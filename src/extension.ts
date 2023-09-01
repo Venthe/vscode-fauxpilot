@@ -16,9 +16,11 @@ export function activate(context: ExtensionContext) {
 
 	let outputChannel = window.createOutputChannel("Fauxpilot");
 	let extConfig = workspace.getConfiguration("fauxpilot");
+	const version = context.extension.packageJSON.version;
 
+	fauxpilotClient.version = version;
 	fauxpilotClient.init(extConfig, outputChannel);
-	fauxpilotClient.log("Fauxpilot start.");
+	fauxpilotClient.log("Fauxpilot start. version: " + version);
 
 	const statusUpdateCallback = (callback: any, showIcon: boolean) => async () => {
 		await callback();

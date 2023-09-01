@@ -1,21 +1,19 @@
-import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse, OpenAIApi } from 'openai';
+
+import OpenAI from 'openai';
 import {
     CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range,
-    TextDocument, workspace, StatusBarItem, OutputChannel, WorkspaceConfiguration
+    TextDocument, workspace, StatusBarItem, OutputChannel, WorkspaceConfiguration, InlineCompletionTriggerKind
 } from 'vscode';
-import { AxiosResponse, AxiosRequestConfig } from 'axios';
+
 import { nextId,delay } from './Utils';
 import { LEADING_LINES_PROP } from './Constants';
 import { fauxpilotClient } from './FauxpilotClient';
+import { fetch } from './AccessBackend';
 
 
 export class FauxpilotCompletionProvider implements InlineCompletionItemProvider {
     cachedPrompts: Map<string, number> = new Map<string, number>();
 
-    private configuration: Configuration = new Configuration({
-        apiKey: workspace.getConfiguration('fauxpilot').get("token")
-    });
-    private openai: OpenAIApi;
     private requestStatus: string = "done";
     private statusBar: StatusBarItem;
     private extConfig: WorkspaceConfiguration;
@@ -26,7 +24,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         this.statusBar = statusBar;
         this.extConfig = extConfig;
         this.baseUrl = fauxpilotClient.BaseUrl;
-        this.openai = new OpenAIApi(this.configuration, this.baseUrl);
+        this.baseUrl = fauxpilotClient.BaseUrl;
     }
 
     //@ts-ignore
@@ -43,7 +41,8 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             fauxpilotClient.log("Ignore file ext: " + fileExt);
             return [];
         }
-        
+
+        const prompt = this.getPrompt(document, position);
         let suggestionDelay = fauxpilotClient.SuggestionDelay;
         if (suggestionDelay > 0) {
             let holdPressId = ++this.userPressKeyCount;
@@ -53,10 +52,14 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
                 return [];
             }    
             fauxpilotClient.log(`after await, ${holdPressId}, ${this.userPressKeyCount}`);
+            if (token.isCancellationRequested) {
+                fauxpilotClient.log('request cancelled.');
+                return [];
+            }
         }
 
-        const prompt = this.getPrompt(document, position);
-        fauxpilotClient.log(`Requesting completion for prompt: $prompt`);
+        // fauxpilotClient.log(`Requesting completion for prompt: ${prompt}`);
+        fauxpilotClient.log(`Requesting completion for prompt, length: ${prompt?.length ?? 0}`);
 
         if (this.isNil(prompt)) {
             fauxpilotClient.log("Prompt is empty, skipping");
@@ -70,7 +73,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         // check there is no newer request util this.request_status is done
         while (this.requestStatus === "pending") {
             fauxpilotClient.log("pending, and Waiting for response...");
-            await this.sleep(200);
+            await delay(200);
             fauxpilotClient.log("current id = " + currentId + " request status = " + this.requestStatus);
             if (this.newestTimestamp() > currentTimestamp) {
                 fauxpilotClient.log("newest timestamp=" + this.newestTimestamp() + "current timestamp=" + currentTimestamp);
@@ -80,29 +83,35 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             }
         }
 
+        if (token.isCancellationRequested) {
+            fauxpilotClient.log('request cancelled.');
+            return [];
+        }
+
         fauxpilotClient.log("current id = " + currentId + "set request status to pending");
         this.requestStatus = "pending";
         this.statusBar.tooltip = "Fauxpilot - Working";
         this.statusBar.text = "$(loading~spin)";
 
-        return this.callOpenAi(prompt as String).then((response) => {
+        fauxpilotClient.log("Calling OpenAi, prompt length: " + prompt?.length);
+        const promptStr = prompt?.toString();
+        if (!promptStr) {
+            return [];
+        }
+        return fetch(promptStr).then((response) => {
             this.statusBar.text = "$(light-bulb)";
-            var result = this.toInlineCompletions(response.data, position);
+            // if (token.isCancellationRequested) {
+            //     fauxpilotClient.log('request cancelled.');
+            //     return [];
+            // }
+            var result = this.toInlineCompletions(response, position);
             fauxpilotClient.log("inline completions array length: " + result.length);
             return result;
-        }).catch((error) => {
-            fauxpilotClient.log("prompt: " + prompt);
-            fauxpilotClient.log(error.stack);
-            fauxpilotClient.log(error);
-            this.statusBar.text = "$(alert)";
-            return ([] as InlineCompletionItem[]);
         }).finally(() => {
-            fauxpilotClient.log("current id = " + currentId + "set request status to done");
+            fauxpilotClient.log("current id = " + currentId + " set request status to done");
             this.requestStatus = "done";
             this.cachedPrompts.delete(currentId);
         });
-
-        // end of 
 
     }
 
@@ -134,36 +143,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
         return Array.from(this.cachedPrompts.values()).reduce((a, b) => Math.max(a, b));
     }
 
-    private sleep(milliseconds: number) {
-        return new Promise(r => setTimeout(r, milliseconds));
-    };
-
-    private callOpenAi(prompt: String): Promise<AxiosResponse<CreateCompletionResponse, any>> {
-        // fauxpilotClient.log("Calling OpenAi: " + prompt + "\n prompt length: " + prompt.length);
-        fauxpilotClient.log("Calling OpenAi, prompt length: " + prompt.length);
-
-        //check if inline completion is enabled
-        const stopWords = fauxpilotClient.StopWords;
-
-        if (this.baseUrl != fauxpilotClient.BaseUrl) {
-            this.baseUrl = fauxpilotClient.BaseUrl;
-            this.openai = new OpenAIApi(this.configuration, this.baseUrl);
-        }
-
-        return this.openai.createCompletion({
-            model: fauxpilotClient.Model,
-            prompt: prompt as CreateCompletionRequestPrompt,
-            /* eslint-disable-next-line @typescript-eslint/naming-convention */
-            max_tokens: fauxpilotClient.MaxTokens,
-            temperature: fauxpilotClient.Temperature,
-            stop: stopWords
-        });
-        
-    }
-
-    private toInlineCompletions(value: CreateCompletionResponse, position: Position): InlineCompletionItem[] {
-        // return value.choices?.map(choice => choice.text)
-        //     .map(choiceText => new InlineCompletionItem(choiceText as string, new Range(position, position))) || [];
+    private toInlineCompletions(value: OpenAI.Completion, position: Position): InlineCompletionItem[] {
         if (!value.choices) {
             return [];
         }

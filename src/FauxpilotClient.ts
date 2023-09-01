@@ -1,6 +1,11 @@
 import { WorkspaceConfiguration, OutputChannel, ConfigurationTarget } from "vscode";
 import { currentTimeString } from "./Utils";
+import { rebuildAccessBackendCache } from "./AccessBackend";
 
+export enum RequestType {
+    OpenAI,
+    Aixos
+}
 
 export class FauxpilotClient {
     private outputChannel?: OutputChannel;
@@ -13,6 +18,10 @@ export class FauxpilotClient {
     private maxTokens: number;
     private temperature: number;
     private stopWords: string[];
+    private token: string;
+    private requestType = RequestType.OpenAI;
+
+    public version: string;
 
     constructor() {
         // this.outputChannel = null;
@@ -22,6 +31,8 @@ export class FauxpilotClient {
         this.maxTokens = 100;
         this.temperature = 0.5;
         this.stopWords = [];
+        this.version = '';
+        this.token = '';
     }
 
     public init(extConfig: WorkspaceConfiguration, channel: OutputChannel) {
@@ -50,6 +61,8 @@ export class FauxpilotClient {
         this.maxTokens = extConfig.get("maxTokens", 100);
         this.temperature = extConfig.get("temperature", 0.5);
         this.stopWords = extConfig.get("inlineCompletion") ? ["\n"] : [];
+        this.token = extConfig.get("token", '');
+        this.requestType = extConfig.get("requestType", 'openai') === 'openai' ? RequestType.OpenAI : RequestType.Aixos;
 
         this.log(`enabled = ${this.enabled}`);
         this.log(`baseUrl = ${this.baseUrl}`);
@@ -59,8 +72,11 @@ export class FauxpilotClient {
         this.log(`maxTokens = ${this.maxTokens}`);
         this.log(`temperature = ${this.temperature}`);
         this.log(`stopWords = ${this.stopWords}`);
+        this.log(`token = ${this.token}`);
+        this.log(`requestType = ${this.requestType}`);
+
+        rebuildAccessBackendCache();
         this.log("reload config finish.");
-        
     }
 
     public log(str: string) {
@@ -111,6 +127,14 @@ export class FauxpilotClient {
     }
     public get StopWords(): Array<string> {
         return this.stopWords;
+    }
+
+    public get Token(): string {
+        return this.token;
+    }
+
+    public get RequestType(): RequestType {
+        return this.requestType;
     }
 
 }
