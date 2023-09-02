@@ -88,16 +88,16 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
             return [];
         }
 
-        fauxpilotClient.log("current id = " + currentId + "set request status to pending");
-        this.requestStatus = "pending";
-        this.statusBar.tooltip = "Fauxpilot - Working";
-        this.statusBar.text = "$(loading~spin)";
-
         fauxpilotClient.log("Calling OpenAi, prompt length: " + prompt?.length);
         const promptStr = prompt?.toString();
         if (!promptStr) {
             return [];
         }
+
+        fauxpilotClient.log("current id = " + currentId + "set request status to pending");
+        this.requestStatus = "pending";
+        this.statusBar.tooltip = "Fauxpilot - Working";
+        this.statusBar.text = "$(loading~spin)";
         return fetch(promptStr).then((response) => {
             this.statusBar.text = "$(light-bulb)";
             // if (token.isCancellationRequested) {
