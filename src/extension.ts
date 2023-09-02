@@ -31,9 +31,12 @@ export function activate(context: ExtensionContext) {
 		}
 	};
 
+	const fileFilter = extConfig.get("fileFilter", [{ pattern: "**" }]);
+	fauxpilotClient.log('fileFilter: ' + JSON.stringify(fileFilter));
+
 	context.subscriptions.push(	
 		languages.registerInlineCompletionItemProvider(
-			extConfig.get("fileFilter", [{ pattern: "**" }]), new FauxpilotCompletionProvider(statusBar, extConfig)
+			fileFilter, new FauxpilotCompletionProvider(statusBar, extConfig)
 		),
 
 		commands.registerCommand(turnOnFauxpilot.command, statusUpdateCallback(turnOnFauxpilot.callback, true)),
