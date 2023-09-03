@@ -2,7 +2,7 @@
   "name": "fauxpilot",
   "displayName": "Fauxpilot",
   "description": "Get completions from Fauxpilot server",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "icon": "assets/icon.png",
   "keywords": [
     "code-suggestion",

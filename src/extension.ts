@@ -38,7 +38,6 @@ export function activate(context: ExtensionContext) {
 		languages.registerInlineCompletionItemProvider(
 			fileFilter, new FauxpilotCompletionProvider(statusBar, extConfig)
 		),
-
 		commands.registerCommand(turnOnFauxpilot.command, statusUpdateCallback(turnOnFauxpilot.callback, true)),
 		commands.registerCommand(turnOffFauxpilot.command, statusUpdateCallback(turnOffFauxpilot.callback, false)),
 		statusBar
@@ -54,6 +53,8 @@ export function activate(context: ExtensionContext) {
 	if (fauxpilotClient.isEnabled) {
 		statusBar.show();
 	}
+
+	fauxpilotClient.log('end of context activate');
 }
 
 // this method is called when your extension is deactivated
