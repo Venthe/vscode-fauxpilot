@@ -1,6 +1,6 @@
 import { Configuration, CreateCompletionRequestPrompt, CreateCompletionResponse, OpenAIApi } from 'openai';
 import { CancellationToken, InlineCompletionContext, InlineCompletionItem, InlineCompletionItemProvider, InlineCompletionList, Position, ProviderResult, Range, TextDocument, workspace, StatusBarItem } from 'vscode';
-import { AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { nextId } from './Uuid';
 import { LEADING_LINES_PROP } from './Constants';
 
@@ -13,9 +13,30 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
     private openai: OpenAIApi = new OpenAIApi(this.configuration, `${workspace.getConfiguration('fauxpilot').get("server")}/${workspace.getConfiguration('fauxpilot').get("engine")}`);
     private requestStatus: string = "done";
     private statusBar: StatusBarItem;
+    private oobabooga_axios: AxiosInstance;
 
     constructor(statusBar: StatusBarItem){
         this.statusBar = statusBar;
+        this.oobabooga_axios = axios.create();
+
+        // intercept the completion request response of oobabooga to bring it into the correct format.
+        this.oobabooga_axios.interceptors.response.use(res => {
+            if (res.status == 200){
+                res.data = {
+                    'id': '0',
+                    'object': "0",
+                    'created': 0,
+                    'model': "0",
+                    'choices': [{'text': res.data.results[0].text,
+                        'index': 0,
+                        'logprobs': null,
+                        'finish_reason': ""
+                        }]
+                };
+                return res;
+            }
+            return null;
+        });
     }
 
     //@ts-ignore
@@ -106,7 +127,48 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
 
         //check if inline completion is enabled
         const stopWords = workspace.getConfiguration('fauxpilot').get("inlineCompletion") ? ["\n"] : [];
+        const use_oobabooga = workspace.getConfiguration('fauxpilot').get("oobabooga") as boolean;
         console.debug("Calling OpenAi with stop words = ", stopWords);
+        if (use_oobabooga) {
+            // create the completion request for oobabooga webui
+            let request = {
+                'prompt': prompt,
+                'max_new_tokens': workspace.getConfiguration('fauxpilot').get("maxTokens"),
+                'auto_max_new_tokens': false,
+                'preset': 'None',
+                'do_sample': true,
+                'temperature': workspace.getConfiguration('fauxpilot').get("temperature"),
+                'top_p': 0.1,
+                'typical_p': 1,
+                'epsilon_cutoff': 0,
+                'eta_cutoff': 0,
+                'tfs': 1,
+                'top_a': 0,
+                'repetition_penalty': 1.18,
+                'repetition_penalty_range': 0,
+                'top_k': 40,
+                'min_length': 0,
+                'no_repeat_ngram_size': 0,
+                'num_beams': 1,
+                'penalty_alpha': 0,
+                'length_penalty': 1,
+                'early_stopping': false,
+                'mirostat_mode': 0,
+                'mirostat_tau': 5,
+                'mirostat_eta': 0.1,
+                'guidance_scale': 1,
+                'negative_prompt': '',
+                'seed': -1,
+                'add_bos_token': true,
+                'truncation_length': 2048,
+                'ban_eos_token': false,
+                'skip_special_tokens': true,
+                'stopping_strings': stopWords
+            }
+            let url = workspace.getConfiguration('fauxpilot').get("server") as string;
+            let oobabooga_request = this.oobabooga_axios.post(url, request);
+            return oobabooga_request;
+        }
         return this.openai.createCompletion({
             model: workspace.getConfiguration('fauxpilot').get("model") ?? "<<UNSET>>",
             prompt: prompt as CreateCompletionRequestPrompt,
