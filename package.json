@@ -50,7 +50,13 @@
       "properties": {
         "fauxpilot.server": {
           "type": "string",
+          "description": "Use http://localhost:5000/v1/engines if you want to use the fauxpilot server or http://localhost:5000/api/v1/generate if you use the text-generation-webui",
           "default": "http://localhost:5000/v1/engines"
+        },
+        "fauxpilot.oobabooga": {
+          "type": "boolean",
+          "description": "Tick this if you want to use the oobabooga text-generation-webui instead of the fauxpilot-server",
+          "default": false
         },
         "fauxpilot.engine": {
           "type": "string",
@@ -66,6 +72,7 @@
         },
         "fauxpilot.maxTokens": {
           "type": "number",
+          "description": "Set the maximum of tokens that should be generated. (lower value is faster)",
           "default": 200
         },
         "fauxpilot.temperature": {
@@ -122,6 +129,7 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
+    "axios": "^0.26.0",
     "openai": "^3.0.0"
   }
 }
