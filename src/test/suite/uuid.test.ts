@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 import { window } from "vscode";
-import { nextId } from "../../Uuid";
+import { nextId } from "../../Utils";
 
 suite('Id generation', () => {
     test('First ID generated is a valid number', () => {
