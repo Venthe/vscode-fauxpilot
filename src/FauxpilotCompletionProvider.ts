@@ -35,7 +35,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
                 return;
             }
 
-            var fileExt = document.fileName.split('.').pop();
+            let fileExt = document.fileName.split('.').pop();
             if (fileExt && fauxpilotClient.ExcludeFileExts.includes(fileExt)) {
                 // check if fileExt in array excludeFileExts
                 fauxpilotClient.log("Ignore file ext: " + fileExt);
@@ -105,7 +105,7 @@ export class FauxpilotCompletionProvider implements InlineCompletionItemProvider
                 //     fauxpilotClient.log('request cancelled.');
                 //     return [];
                 // }
-                var result = this.toInlineCompletions(response, position);
+                let result = this.toInlineCompletions(response, position);
                 fauxpilotClient.log("inline completions array length: " + result.length);
                 return result;
             }).finally(() => {
