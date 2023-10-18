@@ -5,6 +5,8 @@ on:
 name: On tag push
 jobs:
   github-release:
+    secrets: inherit
     uses: ./.github/workflows/github-release.yml
   deploy-to-marketplaces:
+    secrets: inherit
     uses: ./.github/workflows/market-deploy.yml
