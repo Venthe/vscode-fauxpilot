@@ -1,3 +1,7 @@
+# NOTICE
+
+As the project is effectively archived, please use https://github.com/twinnydotdev/twinny
+
 # Visual Studio Code - Fauxpilot Client
 
 [![GitHub contributors](https://img.shields.io/github/contributors/venthe/vscode-fauxpilot)](https://github.com/Venthe/vscode-fauxpilot/graphs/contributors)
